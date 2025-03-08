@@ -8,10 +8,15 @@ export struct TodoItem  {
     full_path: string,
 }
 
+export struct Point  {
+    x: int,
+    y: int,
+}
 
 export component AppWindow inherits Window {
     in-out property <string> path: "/home/jord/coding/texturizers";
     in-out property <string> image-path: "";
+    in-out property <Point> image-initial-click: { x: 0, y: 0 };
     callback go-to-parent() -> string;
     callback glob-path();
     callback setimg(path: string);
@@ -78,8 +83,30 @@ export component AppWindow inherits Window {
             }
 
             HorizontalBox {
+
                 min-width: 1000px;
-                original := Image { }
+                max-width: 1200px;
+                original := Image {
+                    image-fit: fill;
+
+                    area := TouchArea {
+                        pure function get-mouse-point() -> Point {
+                            return { x: self.mouse-x / 1px, y: self.mouse-y / 1px };
+                        }
+
+                        width: parent.width;
+                        height: parent.height;
+
+                        clicked => {
+                            root.image-initial-click = get-mouse-point();
+                            debug(root.image-initial-click);
+                        }
+
+                        moved => {
+                            debug("(" + (self.mouse-x / 1px) + "," + (self.mouse-y / 1px) + ")")
+                        }
+                    }
+                }
             }
         }
     }
