@@ -39,8 +39,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .parent()
                 .map_or_else(|| old_path.clone(), std::path::Path::to_path_buf);
 
-            let res = new_path.to_str().unwrap_or_default();
-            ui.set_path(res.into());
+            let res = maybe_add_character(new_path.to_str().unwrap_or_default().to_string(), '/');
+
+            ui.set_path(res.clone().into());
             globby(&ui_handle);
             res.into()
         }
@@ -112,10 +113,7 @@ fn parse_path(mut path: String) -> Result<String, anyhow::Error> {
             .clone_into(&mut path);
     }
 
-    if !path.ends_with('/') {
-        path.push('/');
-    }
-    path.push('*');
+    path = maybe_add_character(maybe_add_character(path, '/'), '*');
 
     Ok(path)
 }
@@ -146,9 +144,7 @@ fn globby(ui_handle: &Weak<AppWindow>) {
     let mut old_path = ui.get_path().to_string();
     log::warn!("Globbing: {}", &old_path);
 
-    if !old_path.ends_with('/') {
-        old_path.push('/');
-    }
+    old_path = maybe_add_character(old_path, '/');
 
     ui.set_path(old_path.into());
     log::info!("User entered new path: {}", ui.get_path());
@@ -172,7 +168,7 @@ fn globby(ui_handle: &Weak<AppWindow>) {
                     .unwrap_or_default()
                     .into(),
                 checked: false,
-                dir: filename.is_dir(),
+                is_dir: filename.is_dir(),
                 full_path: filename.to_str().unwrap_or_default().into(),
             });
         }
@@ -189,9 +185,17 @@ fn globby(ui_handle: &Weak<AppWindow>) {
                     .unwrap_or_default()
                     .into(),
                 checked: false,
-                dir: filename.is_dir(),
+                is_dir: filename.is_dir(),
                 full_path: filename.to_str().unwrap_or_default().into(),
             });
         }
     }
+}
+
+#[inline]
+fn maybe_add_character(mut string: String, character: char) -> String {
+    if !string.ends_with(character) {
+        string.push(character);
+    }
+    string
 }

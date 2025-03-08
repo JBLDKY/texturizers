@@ -4,7 +4,7 @@ import { ComboBox, SpinBox, Button, CheckBox, Slider, LineEdit, ScrollView, List
 export struct TodoItem  {
     title: string,
     checked: bool,
-    dir: bool,
+    is-dir: bool,
     full_path: string,
 }
 
@@ -24,9 +24,13 @@ export component AppWindow inherits Window {
         HorizontalLayout {
             height: 30px;
             Button {
+                private property <string> parent;
+                parent: "";
                 text: "🠄";
                 clicked => {
-                    root.path = "\{go-to-parent()}";
+                    self.parent = go-to-parent();
+                    debug("New: " + self.parent);
+                    le.text = root.path;
                 }
             }
 
@@ -35,13 +39,10 @@ export component AppWindow inherits Window {
 
                 init() => {
                     self.focus();
-                    debug("Focused!");
                     root.glob-path();
-                    debug("Globbed!");
-                    debug(root.todo-model);
                 }
                 edited(new) => {
-                    root.path = new;
+                    root.path = "\{new}";
                     root.glob-path();
                 }
             }
@@ -53,14 +54,16 @@ export component AppWindow inherits Window {
                     padding-bottom: 3px;
                     Button {
                         private property <bool> was-clicked;
+                        in-out property <bool> is-dir;
                         was-clicked: false;
                         height: 30px;
                         width: parent.width;
                         text: todo.title;
                         checked: todo.checked;
+                        is-dir: todo.is-dir;
 
                         clicked() => {
-                            if (self.was-clicked) {
+                            if (self.was-clicked && self.is-dir) {
                                 root.path = "\{root.path}" + "\{todo.title}";
                                 le.text = root.path;
                                 root.glob-path();
