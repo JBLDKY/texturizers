@@ -17,6 +17,7 @@ export component AppWindow inherits Window {
     in-out property <string> path: "/home/jord/coding/texturizers";
     in-out property <string> image-path: "";
     in-out property <Point> image-initial-click: { x: 0, y: 0 };
+    in-out property <Point> image-release-click: { x: 0, y: 0 };
     callback go-to-parent() -> string;
     callback glob-path();
     callback setimg(path: string);
@@ -86,8 +87,10 @@ export component AppWindow inherits Window {
 
                 min-width: 1000px;
                 max-width: 1200px;
+
                 original := Image {
                     image-fit: fill;
+                    accessible-label: root.image-path;
 
                     area := TouchArea {
                         pure function get-mouse-point() -> Point {
@@ -99,11 +102,16 @@ export component AppWindow inherits Window {
 
                         clicked => {
                             root.image-initial-click = get-mouse-point();
+                            debug("Start:");
                             debug(root.image-initial-click);
                         }
 
-                        moved => {
-                            debug("(" + (self.mouse-x / 1px) + "," + (self.mouse-y / 1px) + ")")
+                        pointer-event(event) => {
+                            if (event.button == PointerEventButton.left && event.kind == PointerEventKind.up) {
+                                root.image-release-click = get-mouse-point();
+                                debug("End:");
+                                debug(root.image-release-click);
+                            }
                         }
                     }
                 }
