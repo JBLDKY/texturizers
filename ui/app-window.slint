@@ -9,6 +9,7 @@ export struct TodoItem  {
     checked: bool,
 }
 
+
 export component AppWindow inherits Window {
     in-out property <string> path: "";
     callback glob-path();
@@ -17,9 +18,7 @@ export component AppWindow inherits Window {
 
     VerticalBox {
         le := LineEdit {
-            text: {
-                root.path
-            };
+            text: root.path;
 
             edited(new) => {
                 root.path = new;

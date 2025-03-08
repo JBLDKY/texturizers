@@ -1,13 +1,16 @@
 #![warn(clippy::pedantic, clippy::nursery)]
 // Prevent console window in addition to Slint window in Windows release builds when, e.g., starting the app via file manager. Ignored on other platforms.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
-use slint::{Model, VecModel};
-use std::{error::Error, path::PathBuf};
-
+use anyhow::anyhow;
 use env_logger::Builder;
 use glob::glob;
 use log::LevelFilter;
+use slint::platform::{Renderer, WindowAdapter};
+use slint::{ComponentHandle, Window};
+use slint::{Model, PhysicalSize, VecModel};
+use slint_generatedAppWindow::InnerLineEditBase_root_1;
+use std::path::Path;
+use std::{error::Error, path::PathBuf};
 
 slint::include_modules!();
 
@@ -15,7 +18,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     setup_logging();
     let ui = AppWindow::new()?;
 
-    let ui_handle = ui.as_weak();
+    ui.window().set_size(PhysicalSize::new(600, 800));
     ui.on_glob_path({
         let ui_handle = ui.as_weak();
         move || {
@@ -54,12 +57,21 @@ fn setup_logging() {
         .init();
 }
 
-/// Get all filers in a directory
-/// Returns an empty list if something goes wrong
-fn list_dir(mut path: String) -> Vec<String> {
-    if !PathBuf::from(&path).is_dir() {
-        log::error!("Entered path is not a directory");
-        return vec![];
+fn parse_path(mut path: String) -> Result<String, anyhow::Error> {
+    let pathbuf = PathBuf::from(&path);
+    if !pathbuf.is_file() || !pathbuf.is_dir() || !pathbuf.exists() {
+        let msg = format!("Entered path is not a dir or file: {}", pathbuf.display());
+        log::error!("{}", msg);
+        return Err(anyhow!(msg));
+    }
+
+    if pathbuf.is_file() {
+        pathbuf
+            .parent()
+            .unwrap_or_else(|| Path::new(""))
+            .to_str()
+            .unwrap_or_default()
+            .clone_into(&mut path);
     }
 
     if !path.ends_with('/') {
@@ -67,6 +79,18 @@ fn list_dir(mut path: String) -> Vec<String> {
     }
     path.push('*');
 
+    Ok(path)
+}
+/// Get all filers in a directory
+/// Returns an empty list if something goes wrong
+fn list_dir(path: String) -> Vec<String> {
+    let path = match parse_path(path) {
+        Ok(v) => v,
+        Err(e) => {
+            log::error!("{}", e);
+            return vec![];
+        }
+    };
     let globbed = match glob(&path) {
         Ok(v) => v,
         Err(e) => {
@@ -77,8 +101,8 @@ fn list_dir(mut path: String) -> Vec<String> {
 
     globbed
         .filter_map(std::result::Result::ok)
-        .map(|path| {
-            path.file_name()
+        .map(|p| {
+            p.file_name()
                 .unwrap_or_default()
                 .to_str()
                 .unwrap_or_default()
