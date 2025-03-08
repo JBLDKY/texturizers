@@ -6,7 +6,7 @@ use env_logger::Builder;
 use glob::glob;
 use image::ImageReader;
 use log::LevelFilter;
-use slint::{ComponentHandle, Weak};
+use slint::{ComponentHandle, Image, Weak};
 use slint::{Model, PhysicalSize, VecModel};
 use slint::{Timer, TimerMode};
 use std::path::Path;
@@ -68,7 +68,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             log::info!("Time to open: {:#?}", st.elapsed());
             if img.is_err() {
                 log::error!("Error opening {}", img_path);
-                return;
+                return Image::default();
             }
             let unwrapped = img.unwrap().into_rgba8();
             log::info!("Time to into_rgba8: {:#?}", st.elapsed());
@@ -80,9 +80,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                 ))
             };
             log::info!("Time to clone: {:#?}", st.elapsed());
-            ui.set_original_image(real);
+            ui.set_original_image(real.clone());
             log::info!("Time to set: {:#?}", st.elapsed());
             log::warn!("Loaded: {}", img_path);
+            real
         }
     });
 

@@ -16,11 +16,12 @@ export struct Point  {
 export component AppWindow inherits Window {
     in-out property <string> path: "/home/jord/coding/texturizers";
     in-out property <string> image-path: "";
+    in-out property <image> image: @image-url("./TexturizersLogo.png");
     in-out property <Point> image-initial-click: { x: 0, y: 0 };
     in-out property <Point> image-release-click: { x: 0, y: 0 };
     callback go-to-parent() -> string;
     callback glob-path();
-    callback setimg(path: string);
+    callback setimg(path: string) -> image;
 
     in property original-image <=> original.source;
 
@@ -91,6 +92,7 @@ export component AppWindow inherits Window {
                 original := Image {
                     image-fit: fill;
                     accessible-label: root.image-path;
+                    source: root.image;
 
                     area := TouchArea {
                         pure function get-mouse-point() -> Point {
