@@ -59,16 +59,18 @@ export component AppWindow inherits Window {
                         height: 30px;
                         width: parent.width;
                         text: todo.title;
+
                         checked: todo.checked;
                         is-dir: todo.is-dir;
+                        primary: self.is-dir;
 
                         clicked() => {
                             if (self.was-clicked && self.is-dir) {
-                                root.path = "\{root.path}" + "\{todo.title}";
-                                le.text = root.path;
+                                root.path = todo.full-path;
+                                le.text = todo.full-path;
                                 root.glob-path();
                             }
-                            setimg(self.text);
+                            setimg(todo.full-path);
                             self.was-clicked = true;
                         }
                     }
@@ -76,7 +78,7 @@ export component AppWindow inherits Window {
             }
 
             HorizontalBox {
-                min-width: 800px;
+                min-width: 1000px;
                 original := Image { }
             }
         }

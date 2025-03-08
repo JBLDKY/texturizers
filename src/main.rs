@@ -4,11 +4,13 @@
 use anyhow::anyhow;
 use env_logger::Builder;
 use glob::glob;
+use image::ImageReader;
 use log::LevelFilter;
 use slint::{ComponentHandle, Weak};
 use slint::{Model, PhysicalSize, VecModel};
 use slint::{Timer, TimerMode};
 use std::path::Path;
+use std::time::{Duration, Instant};
 use std::{error::Error, path::PathBuf};
 
 slint::include_modules!();
@@ -53,18 +55,23 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     ui.on_setimg({
         let ui_handle = ui.as_weak();
-        move |title| {
+        move |img_path| {
             log::warn!("set-img");
             let ui = ui_handle.unwrap();
 
-            let mut img_path = ui.get_path().to_string();
-            img_path.push_str(title.as_ref());
-            let img = image::open(&img_path);
+            // let mut img_path = ui.get_path().to_string();
+            // img_path.push_str(title.as_ref());
+            let st = Instant::now();
+
+            let img = ImageReader::open(&img_path).unwrap().decode();
+
+            log::info!("Time to open: {:#?}", st.elapsed());
             if img.is_err() {
                 log::error!("Error opening {}", img_path);
                 return;
             }
             let unwrapped = img.unwrap().into_rgba8();
+            log::info!("Time to into_rgba8: {:#?}", st.elapsed());
             let real = {
                 slint::Image::from_rgba8(slint::SharedPixelBuffer::clone_from_slice(
                     unwrapped.as_raw(),
@@ -72,7 +79,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                     unwrapped.height(),
                 ))
             };
+            log::info!("Time to clone: {:#?}", st.elapsed());
             ui.set_original_image(real);
+            log::info!("Time to set: {:#?}", st.elapsed());
             log::warn!("Loaded: {}", img_path);
         }
     });
@@ -164,13 +173,17 @@ fn globby(ui_handle: &Weak<AppWindow>) {
     for filename in list_dir(ui.get_path().to_string()) {
         if filename.is_dir() {
             log::debug!("found dir: {}", filename.display());
-            todos_vec.push(TodoItem {
-                title: filename
+            let name = format!(
+                "> {}/",
+                filename
                     .file_name()
                     .unwrap_or_default()
                     .to_str()
                     .unwrap_or_default()
-                    .into(),
+            );
+
+            todos_vec.push(TodoItem {
+                title: name.into(),
                 checked: false,
                 is_dir: filename.is_dir(),
                 full_path: filename.to_str().unwrap_or_default().into(),
