@@ -7,11 +7,12 @@ import { SpinBox, Button, CheckBox, Slider, LineEdit, ScrollView, ListView,
 export struct TodoItem  {
     title: string,
     checked: bool,
+    dir: bool,
 }
 
 
 export component AppWindow inherits Window {
-    in-out property <string> path: "";
+    in-out property <string> path: "/home/jord/coding/texturizers";
     callback glob-path();
 
     in-out property <[TodoItem]> todo-model: [];
@@ -20,6 +21,9 @@ export component AppWindow inherits Window {
         le := LineEdit {
             text: root.path;
 
+            init() => {
+                self.focus()
+            }
             edited(new) => {
                 root.path = new;
                 root.glob-path();
@@ -28,6 +32,7 @@ export component AppWindow inherits Window {
 
         ListView {
             for todo in root.todo-model: HorizontalLayout {
+                width: 300px;
                 CheckBox {
                     toggled => {
                         todo.checked = self.checked;
@@ -35,6 +40,19 @@ export component AppWindow inherits Window {
 
                     text: todo.title;
                     checked: todo.checked;
+                }
+
+                if todo.dir:  
+                    Button {
+                    text: "-->";
+                    checked: todo.checked;
+
+                    clicked() => {
+                        root.path = "\{root.path}" + "\{todo.title}";
+                        le.text = root.path;
+                        debug(root.path);
+                        root.glob-path();
+                    }
                 }
             }
         }

@@ -23,7 +23,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         let ui_handle = ui.as_weak();
         move || {
             let ui = ui_handle.unwrap();
-            ui.set_path(ui.get_path());
+
+            let mut old_path = ui.get_path().to_string();
+
+            if !old_path.ends_with('/') {
+                old_path.push('/');
+            }
+
+            ui.set_path(old_path.into());
             log::info!("User entered new path: {}", ui.get_path());
 
             let todos = ui.get_todo_model();
@@ -35,10 +42,33 @@ fn main() -> Result<(), Box<dyn Error>> {
             todos_vec.clear();
 
             for filename in list_dir(ui.get_path().to_string()) {
-                todos_vec.push(TodoItem {
-                    title: filename.into(),
-                    checked: false,
-                });
+                if filename.is_dir() {
+                    todos_vec.push(TodoItem {
+                        title: filename
+                            .file_name()
+                            .unwrap_or_default()
+                            .to_str()
+                            .unwrap_or_default()
+                            .into(),
+                        checked: false,
+                        dir: filename.is_dir(),
+                    });
+                }
+            }
+
+            for filename in list_dir(ui.get_path().to_string()) {
+                if filename.is_file() {
+                    todos_vec.push(TodoItem {
+                        title: filename
+                            .file_name()
+                            .unwrap_or_default()
+                            .to_str()
+                            .unwrap_or_default()
+                            .into(),
+                        checked: false,
+                        dir: filename.is_dir(),
+                    });
+                }
             }
         }
     });
@@ -57,9 +87,10 @@ fn setup_logging() {
         .init();
 }
 
+// Parses a path to a valid path
 fn parse_path(mut path: String) -> Result<String, anyhow::Error> {
     let pathbuf = PathBuf::from(&path);
-    if !pathbuf.is_file() || !pathbuf.is_dir() || !pathbuf.exists() {
+    if !pathbuf.is_file() && !pathbuf.is_dir() && !pathbuf.exists() {
         let msg = format!("Entered path is not a dir or file: {}", pathbuf.display());
         log::error!("{}", msg);
         return Err(anyhow!(msg));
@@ -83,7 +114,7 @@ fn parse_path(mut path: String) -> Result<String, anyhow::Error> {
 }
 /// Get all filers in a directory
 /// Returns an empty list if something goes wrong
-fn list_dir(path: String) -> Vec<String> {
+fn list_dir(path: String) -> Vec<PathBuf> {
     let path = match parse_path(path) {
         Ok(v) => v,
         Err(e) => {
@@ -99,14 +130,5 @@ fn list_dir(path: String) -> Vec<String> {
         }
     };
 
-    globbed
-        .filter_map(std::result::Result::ok)
-        .map(|p| {
-            p.file_name()
-                .unwrap_or_default()
-                .to_str()
-                .unwrap_or_default()
-                .to_string()
-        })
-        .collect()
+    globbed.filter_map(std::result::Result::ok).collect()
 }
