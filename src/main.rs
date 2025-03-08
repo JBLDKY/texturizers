@@ -12,6 +12,9 @@ use std::path::Path;
 use std::{error::Error, path::PathBuf};
 
 slint::include_modules!();
+pub const TIME_TO_INITIALIZE_APP: usize = 500;
+pub const DEFAULT_WIDTH_APP: usize = 1200;
+pub const DEFAULT_HEIGHT_APP: usize = 800;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logging();
@@ -20,13 +23,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     let timer = Timer::default();
     timer.start(
         TimerMode::SingleShot,
-        std::time::Duration::from_millis(500),
+        std::time::Duration::from_millis(TIME_TO_INITIALIZE_APP),
         {
             let ui_handle = ui.as_weak();
             move || globby(&ui_handle)
         },
     );
-    ui.window().set_size(PhysicalSize::new(1200, 800));
+    ui.window()
+        .set_size(PhysicalSize::new(DEFAULT_WIDTH_APP, DEFAULT_HEIGHT_APP));
 
     ui.on_go_to_parent({
         let ui_handle = ui.as_weak();
