@@ -12,9 +12,9 @@ use std::path::Path;
 use std::{error::Error, path::PathBuf};
 
 slint::include_modules!();
-pub const TIME_TO_INITIALIZE_APP: usize = 500;
-pub const DEFAULT_WIDTH_APP: usize = 1200;
-pub const DEFAULT_HEIGHT_APP: usize = 800;
+pub const TIME_TO_INITIALIZE_APP: u64 = 500;
+pub const DEFAULT_WIDTH_APP: u32 = 1200;
+pub const DEFAULT_HEIGHT_APP: u32 = 800;
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logging();
