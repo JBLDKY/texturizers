@@ -50,7 +50,6 @@ export component AppWindow inherits Window {
                     clicked() => {
                         root.path = "\{root.path}" + "\{todo.title}";
                         le.text = root.path;
-                        debug(root.path);
                         root.glob-path();
                     }
                 }
