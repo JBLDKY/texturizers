@@ -54,9 +54,12 @@ fn setup_logging() {
         .init();
 }
 
+/// Get all filers in a directory
+/// Returns an empty list if something goes wrong
 fn list_dir(mut path: String) -> Vec<String> {
     if !PathBuf::from(&path).is_dir() {
         log::error!("Entered path is not a directory");
+        return vec![];
     }
 
     if !path.ends_with('/') {
