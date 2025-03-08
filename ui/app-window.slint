@@ -1,58 +1,80 @@
-import { Button, VerticalBox, LineEdit } from "std-widgets.slint";
-
-import { SpinBox, Button, CheckBox, Slider, LineEdit, ScrollView, ListView,
-    HorizontalBox, VerticalBox, GridBox, StandardButton, Palette } from "std-widgets.slint";
+import { ComboBox, SpinBox, Button, CheckBox, Slider, LineEdit, ScrollView, ListView, HorizontalBox, VerticalBox, GridBox, StandardButton, Palette } from "std-widgets.slint";
 
 @rust-attr(derive(serde::Serialize, serde::Deserialize))
 export struct TodoItem  {
     title: string,
     checked: bool,
     dir: bool,
+    full_path: string,
 }
 
 
 export component AppWindow inherits Window {
     in-out property <string> path: "/home/jord/coding/texturizers";
+    in-out property <string> image-path: "";
+    callback go-to-parent() -> string;
     callback glob-path();
+    callback setimg(path: string);
+
+    in property original-image <=> original.source;
 
     in-out property <[TodoItem]> todo-model: [];
-
+    title: "Texturize.rs";
     VerticalBox {
-        le := LineEdit {
-            text: root.path;
-
-            init() => {
-                self.focus()
+        HorizontalLayout {
+            height: 30px;
+            Button {
+                text: "🠄";
+                clicked => {
+                    root.path = "\{go-to-parent()}";
+                }
             }
-            edited(new) => {
-                root.path = new;
-                root.glob-path();
+
+            le := LineEdit {
+                text: root.path;
+
+                init() => {
+                    self.focus();
+                    debug("Focused!");
+                    root.glob-path();
+                    debug("Globbed!");
+                    debug(root.todo-model);
+                }
+                edited(new) => {
+                    root.path = new;
+                    root.glob-path();
+                }
             }
         }
 
-        ListView {
-            for todo in root.todo-model: HorizontalLayout {
-                width: 300px;
-                CheckBox {
-                    toggled => {
-                        todo.checked = self.checked;
-                    }
-
-                    text: todo.title;
-                    checked: todo.checked;
-                }
-
-                if todo.dir:  
+        HorizontalLayout {
+            ListView {
+                for todo in root.todo-model: HorizontalLayout {
+                    padding-bottom: 3px;
                     Button {
-                    text: "-->";
-                    checked: todo.checked;
+                        private property <bool> was-clicked;
+                        was-clicked: false;
+                        height: 30px;
+                        width: parent.width;
+                        text: todo.title;
+                        checked: todo.checked;
 
-                    clicked() => {
-                        root.path = "\{root.path}" + "\{todo.title}";
-                        le.text = root.path;
-                        root.glob-path();
+                        clicked() => {
+                            if (self.was-clicked) {
+                                root.path = "\{root.path}" + "\{todo.title}";
+                                le.text = root.path;
+                                root.glob-path();
+                            }
+                            setimg(self.text);
+                            self.was-clicked = true;
+                        }
                     }
                 }
+            }
+
+            HorizontalBox {
+                min-width: 800px;
+                original := Image { }
             }
         }
     }
