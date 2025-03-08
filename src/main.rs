@@ -2,21 +2,11 @@
 // Prevent console window in addition to Slint window in Windows release builds when, e.g., starting the app via file manager. Ignored on other platforms.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use slint::{slint, Model, ModelRc, SharedString, VecModel};
-use std::{
-    borrow::{BorrowMut, Cow},
-    error::Error,
-    ffi::OsStr,
-    fs::File,
-    ops::Deref,
-    path::{Path, PathBuf},
-    rc::Rc,
-};
+use slint::{Model, VecModel};
+use std::{error::Error, path::PathBuf};
 
-use anyhow::anyhow;
 use env_logger::Builder;
 use glob::glob;
-use home::home_dir;
 use log::LevelFilter;
 
 slint::include_modules!();
