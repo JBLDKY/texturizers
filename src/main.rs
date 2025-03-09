@@ -4,6 +4,7 @@
 use callback::{
     dynamic_image_to_slint_image, go_to_parent, setimg, update_boxed_image, update_file_tree,
 };
+use core::f32;
 use image::{imageops, DynamicImage, GenericImageView, ImageBuffer};
 use logging::setup_logs;
 use slint::{ComponentHandle, PhysicalSize, Timer, TimerMode};
@@ -31,6 +32,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let img_ref = Arc::new(Mutex::new(img));
     let img_ref_for_roll_y = Arc::clone(&img_ref);
     let img_ref_for_roll_x = Arc::clone(&img_ref);
+
+    // TODO: Cleanup
+    setimg("./TexturizersLogo.png", &Arc::clone(&img_ref))?;
 
     // Trigger the initial reload
     let timer = Timer::default();
@@ -136,9 +140,16 @@ fn roll_x(img: &DynamicImage, dx: f32) -> DynamicImage {
         return img.clone();
     }
 
+    if dx.abs() <= f32::EPSILON {
+        return img.clone();
+    };
+
     log::debug!("Rolling x by {dx}");
 
     let (w, h) = img.dimensions();
+    if w == 0 {
+        return img.clone();
+    };
     let dx_pixels = (w as f32 * dx) as i32;
     let dx_pixels = dx_pixels.rem_euclid(w as i32) as u32;
 
@@ -163,9 +174,16 @@ fn roll_y(img: &DynamicImage, dy: f32) -> DynamicImage {
         log::error!("Attempt to roll y by invalid value: {dy}");
         return img.clone();
     }
+
+    if dy.abs() <= f32::EPSILON {
+        return img.clone();
+    };
     log::debug!("Rolling y by {dy}");
 
     let (w, h) = img.dimensions();
+    if h == 0 {
+        return img.clone();
+    };
     let dy_pixels = (h as f32 * dy) as i32;
     let dy_pixels = dy_pixels.rem_euclid(h as i32) as u32;
     let upper = imageops::crop_imm(img, 0, 0, w, dy_pixels).to_image();

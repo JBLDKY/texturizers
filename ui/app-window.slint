@@ -19,6 +19,7 @@ export component AppWindow inherits Window {
     in-out property <string> path: "/home/jord/coding/texturizers";
 
     // Placeholder image to display the logo until the user selects his own image
+    private property <string> logo-path: "./TexturizersLogo.png";
     in-out property <image> image: @image-url("./TexturizersLogo.png");
 
     // Mouse
@@ -45,6 +46,7 @@ export component AppWindow inherits Window {
     title: "Texturize.rs";
     in-out property <int> active-tab;
     VerticalLayout {
+
         tab_bar := HorizontalLayout {
             spacing: 3px;
             Button {
@@ -172,9 +174,23 @@ export component AppWindow inherits Window {
                             }
 
                             HorizontalBox {
+                                height: 30px;
+                                CheckBox {
+                                    height: parent.height;
+                                    text: "Nearest";
+                                    checked: true;
+                                }
 
+                                Button {
+                                    height: parent.height;
+                                    text: "Export";
+                                }
+                            }
+
+                            HorizontalBox {
                                 min-width: 1000px;
                                 max-width: 1200px;
+                                min-height: 1000px;
 
                                 original := Image {
                                     image-fit: fill;
@@ -196,7 +212,7 @@ export component AppWindow inherits Window {
                 VerticalBox {
 
                     Text {
-                        text: "Output dir:";
+                        text: "Output dir: ";
                     }
 
                     LineEdit {

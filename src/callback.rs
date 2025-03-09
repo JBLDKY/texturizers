@@ -58,6 +58,7 @@ pub fn setimg(
     img_path: &str,
     img_ref: &Arc<Mutex<Box<DynamicImage>>>,
 ) -> Result<Image, anyhow::Error> {
+    dbg!(img_path);
     //  Read new image from filepath
     let st = Instant::now();
     let dynamic_image = ImageReader::open(img_path)?.decode()?;
