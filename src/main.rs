@@ -95,11 +95,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             // Update on the UI
             let st = Instant::now();
-            ui.set_original_image(result.clone());
+            ui.set_original_image(result);
             log::debug!("Time to set: {:#?}", st.elapsed());
 
             log::warn!("set-img took: {:#?}", ot.elapsed());
-            result
         }
     });
 
