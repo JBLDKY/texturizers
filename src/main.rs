@@ -19,9 +19,34 @@ pub const TIME_TO_INITIALIZE_APP: u64 = 500;
 pub const DEFAULT_WIDTH_APP: u32 = 1200;
 pub const DEFAULT_HEIGHT_APP: u32 = 800;
 
+fn update_path(ui: &AppWindow, path: impl AsRef<Path>) {
+    let parsed = path.as_ref().to_str().unwrap_or_default().to_string();
+    let with_forward_slash = maybe_add_character(parsed, '/');
+    ui.set_path(with_forward_slash.into());
+}
+
+fn go_to_parent(ui: &AppWindow) {
+    // First we must get the parent dir
+    // However, a path may not have a parent dir, in which case we
+    // do return the current dir
+    let old_path = PathBuf::from(ui.get_path().to_string());
+    let new_path = old_path
+        .parent()
+        .map_or_else(|| old_path.clone(), std::path::Path::to_path_buf);
+
+    // Update the path
+    update_path(ui, new_path);
+
+    // Globby depends on update path
+    globby(ui);
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logging();
     let ui = AppWindow::new()?;
+    ui.window()
+        .set_size(PhysicalSize::new(DEFAULT_WIDTH_APP, DEFAULT_HEIGHT_APP));
+
     let img: Box<DynamicImage> = Box::default();
     let img_ref = Arc::new(Mutex::new(img));
     let img_ref_clone = Arc::clone(&img_ref);
@@ -32,29 +57,20 @@ fn main() -> Result<(), Box<dyn Error>> {
         TimerMode::SingleShot,
         std::time::Duration::from_millis(TIME_TO_INITIALIZE_APP),
         {
-            let ui_handle = ui.as_weak();
+            let ui_handle = ui.as_weak().unwrap();
             move || globby(&ui_handle)
         },
     );
-    ui.window()
-        .set_size(PhysicalSize::new(DEFAULT_WIDTH_APP, DEFAULT_HEIGHT_APP));
 
     ui.on_go_to_parent({
         let ui_handle = ui.as_weak();
         move || {
             log::warn!("go-to-parent");
+            go_to_parent(&ui_handle.unwrap());
+
             let ui = ui_handle.unwrap();
 
-            let old_path = PathBuf::from(ui.get_path().to_string());
-            let new_path = old_path
-                .parent()
-                .map_or_else(|| old_path.clone(), std::path::Path::to_path_buf);
-
-            let res = maybe_add_character(new_path.to_str().unwrap_or_default().to_string(), '/');
-
-            ui.set_path(res.clone().into());
-            globby(&ui_handle);
-            res.into()
+            ui.get_path()
         }
     });
 
@@ -130,7 +146,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let ui_handle = ui.as_weak();
         move || {
             log::warn!("glob-path");
-            globby(&ui_handle);
+            globby(&ui_handle.unwrap());
         }
     });
 
@@ -191,9 +207,7 @@ fn list_dir(path: String) -> Vec<PathBuf> {
     globbed.filter_map(std::result::Result::ok).collect()
 }
 
-fn globby(ui_handle: &Weak<AppWindow>) {
-    let ui = ui_handle.unwrap();
-
+fn globby(ui: &AppWindow) {
     let mut old_path = ui.get_path().to_string();
     log::warn!("Globbing: {}", &old_path);
 
