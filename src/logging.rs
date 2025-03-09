@@ -4,7 +4,8 @@
 use env_logger::Builder;
 use log::LevelFilter;
 
-pub fn setup_logging() {
+/// Sets up logging
+pub fn setup_logs() {
     // let app_dir = home_dir().ok_or_else(|| anyhow!("Cannot find home directory"))?;
 
     Builder::new()

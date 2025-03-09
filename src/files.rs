@@ -9,6 +9,8 @@ use slint::{Model, VecModel};
 use std::path::Path;
 use std::path::PathBuf;
 
+/// NOTE: This modifies the UI
+/// Updates the entire filetree
 pub fn update_file_tree(ui: &AppWindow) {
     // Sort the files in the current UI path directory
     // If the ui path changed, this must be called AFTER said change
@@ -30,6 +32,7 @@ pub fn update_file_tree(ui: &AppWindow) {
     }
 }
 
+/// Constructs the text we display for directories
 fn dir_name_format(path: impl AsRef<Path>) -> String {
     format!(
         "> {}/",
@@ -41,6 +44,7 @@ fn dir_name_format(path: impl AsRef<Path>) -> String {
     )
 }
 
+/// Constructs the text we display for files
 fn file_name_format(path: impl AsRef<Path>) -> String {
     path.as_ref()
         .file_name()
@@ -50,6 +54,7 @@ fn file_name_format(path: impl AsRef<Path>) -> String {
         .to_string()
 }
 
+/// Constructs the text we display in the filetree buttons from a path
 fn filetree_entry_name_from_path(path: impl AsRef<Path>) -> String {
     if path.as_ref().is_dir() {
         return dir_name_format(path);
@@ -58,6 +63,7 @@ fn filetree_entry_name_from_path(path: impl AsRef<Path>) -> String {
     file_name_format(path)
 }
 
+/// Constructs a button entry for the filetree from a path
 fn filetree_entry_from_path(path: impl AsRef<Path>) -> TodoItem {
     let file = path.as_ref();
     TodoItem {
@@ -74,7 +80,7 @@ fn sort_filetree(mut files: Vec<PathBuf>) -> Vec<PathBuf> {
     files
 }
 
-/// Creates a globstring from a path
+/// Creates a globstring from a path to get all items in a directory
 fn glob_string_from_path(path: impl AsRef<Path>) -> Result<String, anyhow::Error> {
     let mut pathbuf = path.as_ref().to_path_buf();
 
@@ -95,7 +101,7 @@ fn glob_string_from_path(path: impl AsRef<Path>) -> Result<String, anyhow::Error
 }
 
 /// Get all files in a directory
-/// Returns an empty list if something goes wrong
+/// Returns an empty list; if something goes wrong
 fn list_dir(path: String) -> Vec<PathBuf> {
     let path = match glob_string_from_path(path) {
         Ok(v) => v,

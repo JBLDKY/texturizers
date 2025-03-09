@@ -4,7 +4,7 @@
 use callback::go_to_parent;
 use files::update_file_tree;
 use image::{DynamicImage, ImageReader};
-use logging::setup_logging;
+use logging::setup_logs;
 use slint::Image;
 use slint::PhysicalSize;
 use slint::{ComponentHandle, Timer, TimerMode};
@@ -23,7 +23,7 @@ pub const DEFAULT_WIDTH_APP: u32 = 1200;
 pub const DEFAULT_HEIGHT_APP: u32 = 800;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    setup_logging();
+    setup_logs();
     let ui = AppWindow::new()?;
     ui.window()
         .set_size(PhysicalSize::new(DEFAULT_WIDTH_APP, DEFAULT_HEIGHT_APP));
