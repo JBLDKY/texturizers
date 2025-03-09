@@ -1,50 +1,26 @@
 #![warn(clippy::pedantic, clippy::nursery)]
 // Prevent console window in addition to Slint window in Windows release builds when, e.g., starting the app via file manager. Ignored on other platforms.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-use anyhow::anyhow;
-use env_logger::Builder;
-use glob::glob;
+use callback::go_to_parent;
+use files::update_file_tree;
 use image::{DynamicImage, ImageReader};
-use log::LevelFilter;
-use slint::{ComponentHandle, Image, Weak};
-use slint::{Model, PhysicalSize, VecModel};
-use slint::{Timer, TimerMode};
-use std::path::Path;
+use logging::setup_logging;
+use slint::Image;
+use slint::PhysicalSize;
+use slint::{ComponentHandle, Timer, TimerMode};
+use std::error::Error;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
-use std::{error::Error, path::PathBuf};
+mod app;
+mod callback;
+mod files;
+mod logging;
+mod path;
+use crate::app::AppWindow;
 
-slint::include_modules!();
 pub const TIME_TO_INITIALIZE_APP: u64 = 500;
 pub const DEFAULT_WIDTH_APP: u32 = 1200;
 pub const DEFAULT_HEIGHT_APP: u32 = 800;
-
-fn update_path(ui: &AppWindow, path: impl AsRef<Path>) {
-    // Parse the path to a string
-    let parsed = path.as_ref().to_str().unwrap_or_default().to_string();
-
-    // Append '/' if it does not yet end with '/' just to be consistent
-    let with_forward_slash = maybe_add_character(parsed, '/');
-
-    // Update the source of truth path
-    ui.set_path(with_forward_slash.into());
-}
-
-fn go_to_parent(ui: &AppWindow) {
-    // First we must get the parent dir
-    // However, a path may not have a parent dir, in which case we
-    // do return the current dir
-    let old_path = PathBuf::from(ui.get_path().to_string());
-    let new_path = old_path
-        .parent()
-        .map_or_else(|| old_path.clone(), std::path::Path::to_path_buf);
-
-    // Update the path
-    update_path(ui, new_path);
-
-    // Globby depends on update path
-    globby(ui);
-}
 
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logging();
@@ -64,7 +40,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         std::time::Duration::from_millis(TIME_TO_INITIALIZE_APP),
         {
             let ui_handle = ui.as_weak().unwrap();
-            move || globby(&ui_handle)
+            move || update_file_tree(&ui_handle)
         },
     );
 
@@ -155,127 +131,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         let ui_handle = ui.as_weak();
         move || {
             log::warn!("glob-path");
-            globby(&ui_handle.unwrap());
+            update_file_tree(&ui_handle.unwrap());
         }
     });
 
     // Must be after the callbacks
     ui.run()?;
     Ok(())
-}
-
-fn setup_logging() {
-    // let app_dir = home_dir().ok_or_else(|| anyhow!("Cannot find home directory"))?;
-
-    Builder::new()
-        // .target(env_logger::Target::Pipe(Box::new(log_file)))
-        .filter_level(LevelFilter::Debug)
-        .init();
-}
-
-// Parses a path to a valid path
-fn parse_path(mut path: String) -> Result<String, anyhow::Error> {
-    let pathbuf = PathBuf::from(&path);
-    if !pathbuf.is_file() && !pathbuf.is_dir() && !pathbuf.exists() {
-        let msg = format!("Entered path is not a dir or file: {}", pathbuf.display());
-        log::error!("{}", msg);
-        return Err(anyhow!(msg));
-    }
-
-    if pathbuf.is_file() {
-        pathbuf
-            .parent()
-            .unwrap_or_else(|| Path::new(""))
-            .to_str()
-            .unwrap_or_default()
-            .clone_into(&mut path);
-    }
-
-    path = maybe_add_character(maybe_add_character(path, '/'), '*');
-
-    Ok(path)
-}
-/// Get all filers in a directory
-/// Returns an empty list if something goes wrong
-fn list_dir(path: String) -> Vec<PathBuf> {
-    let path = match parse_path(path) {
-        Ok(v) => v,
-        Err(e) => {
-            log::error!("{}", e);
-            return vec![];
-        }
-    };
-    let globbed = match glob(&path) {
-        Ok(v) => v,
-        Err(e) => {
-            log::error!("Could not glob files from your system. Error: {e}");
-            return vec![];
-        }
-    };
-
-    globbed.filter_map(std::result::Result::ok).collect()
-}
-
-fn globby(ui: &AppWindow) {
-    let mut old_path = ui.get_path().to_string();
-    log::warn!("Globbing: {}", &old_path);
-
-    old_path = maybe_add_character(old_path, '/');
-
-    ui.set_path(old_path.into());
-    log::info!("User entered new path: {}", ui.get_path());
-
-    let todos = ui.get_todo_model();
-    let todos_vec = todos
-        .as_any()
-        .downcast_ref::<VecModel<TodoItem>>()
-        .expect("The ui has a VecModel; the list of images");
-
-    todos_vec.clear();
-
-    for filename in list_dir(ui.get_path().to_string()) {
-        if filename.is_dir() {
-            log::debug!("found dir: {}", filename.display());
-            let name = format!(
-                "> {}/",
-                filename
-                    .file_name()
-                    .unwrap_or_default()
-                    .to_str()
-                    .unwrap_or_default()
-            );
-
-            todos_vec.push(TodoItem {
-                title: name.into(),
-                checked: false,
-                is_dir: filename.is_dir(),
-                full_path: filename.to_str().unwrap_or_default().into(),
-            });
-        }
-    }
-
-    for filename in list_dir(ui.get_path().to_string()) {
-        if filename.is_file() {
-            log::debug!("found file: {}", filename.display());
-            todos_vec.push(TodoItem {
-                title: filename
-                    .file_name()
-                    .unwrap_or_default()
-                    .to_str()
-                    .unwrap_or_default()
-                    .into(),
-                checked: false,
-                is_dir: filename.is_dir(),
-                full_path: filename.to_str().unwrap_or_default().into(),
-            });
-        }
-    }
-}
-
-#[inline]
-fn maybe_add_character(mut string: String, character: char) -> String {
-    if !string.ends_with(character) {
-        string.push(character);
-    }
-    string
 }
