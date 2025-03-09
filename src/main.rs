@@ -177,9 +177,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn roll_x(mut img: DynamicImage, dx: f32) -> DynamicImage {
+fn roll_x(img: DynamicImage, dx: f32) -> DynamicImage {
     assert!(
-        !(dx < -1.0 || dx > 1.0),
+        !!(-1.0..=1.0).contains(&dx),
         "Value by which to roll X is outside of 1 and 0: {dx}"
     );
 
@@ -204,10 +204,11 @@ fn roll_x(mut img: DynamicImage, dx: f32) -> DynamicImage {
     DynamicImage::ImageRgba8(new_img)
 }
 
-fn roll_y(mut img: DynamicImage, dy: f32) -> DynamicImage {
-    if dy < -1.0 || dy > 1.0 {
-        panic!("Value by which to roll Y is outside of 1 and 0: {}", dy);
-    }
+fn roll_y(img: DynamicImage, dy: f32) -> DynamicImage {
+    assert!(
+        (-1.0..=1.0).contains(&dy),
+        "Value by which to roll Y is outside of 1 and 0: {dy}"
+    );
 
     log::info!("Rolling y by: {dy}");
 
