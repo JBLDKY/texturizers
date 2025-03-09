@@ -33,8 +33,8 @@ pub fn update_file_tree(ui: &AppWindow) {
     }
 }
 
-/// Handles for moving a directory up
 /// NOTE: This modifies the ui
+/// Handles for moving a directory up
 pub fn go_to_parent(ui: &AppWindow) {
     // First we must get the parent dir
     // However, a path may not have a parent dir, in which case we
