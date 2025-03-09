@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     ui.on_roll_y({
         let ui_handle = ui.as_weak();
         move |y| {
-            let new;
+            let mut new;
             {
                 let boxed_image = {
                     &mut img_ref_for_roll_y
@@ -56,7 +56,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 };
                 new = *boxed_image.clone();
             }
-            roll_y(&new, y);
+            new = roll_y(&new, y);
             update_boxed_image(&new, &img_ref_for_roll_y);
             ui_handle
                 .unwrap()
@@ -67,7 +67,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     ui.on_roll_x({
         let ui_handle = ui.as_weak();
         move |x| {
-            let new;
+            let mut new;
             {
                 let boxed_image = {
                     &mut img_ref_for_roll_x
@@ -77,7 +77,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 };
                 new = *boxed_image.clone();
             }
-            roll_x(&new, x);
+            new = roll_x(&new, x);
             update_boxed_image(&new, &img_ref_for_roll_x);
             ui_handle
                 .unwrap()
@@ -163,7 +163,7 @@ fn roll_y(img: &DynamicImage, dy: f32) -> DynamicImage {
         log::error!("Attempt to roll y by invalid value: {dy}");
         return img.clone();
     }
-    log::info!("Rolling y by {dy}");
+    log::debug!("Rolling y by {dy}");
 
     let (w, h) = img.dimensions();
     let dy_pixels = (h as f32 * dy) as i32;

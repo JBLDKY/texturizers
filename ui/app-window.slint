@@ -118,7 +118,9 @@ export component AppWindow inherits Window {
                         step: 0.05;
 
                         changed(value) => {
-                            roll-x(value - self.cur-x);
+                            if (value - self.cur-x != 0) {
+                                roll-x(value - self.cur-x);
+                            }
                             self.cur-x = value;
                         }
                     }
@@ -132,7 +134,9 @@ export component AppWindow inherits Window {
                         step: 0.05;
 
                         changed(value) => {
-                            roll-y(value - self.cur-y);
+                            if (value - self.cur-y != 0) {
+                                roll-y(value - self.cur-y);
+                            }
                             self.cur-y = value;
                         }
                     }
