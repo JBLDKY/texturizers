@@ -4,16 +4,14 @@
 use anyhow::anyhow;
 use env_logger::Builder;
 use glob::glob;
-use image::{load_from_memory, DynamicImage, ImageFormat, ImageReader};
+use image::{DynamicImage, ImageReader};
 use log::LevelFilter;
-use slint::{ComponentHandle, Image, ModelRc, Weak};
+use slint::{ComponentHandle, Image, Weak};
 use slint::{Model, PhysicalSize, VecModel};
 use slint::{Timer, TimerMode};
-use std::io::{BufReader, Cursor};
 use std::path::Path;
-use std::rc::Rc;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use std::{error::Error, path::PathBuf};
 
 slint::include_modules!();
