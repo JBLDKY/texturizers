@@ -2,6 +2,7 @@
 // Prevent console window in addition to Slint window in Windows release builds when, e.g., starting the app via file manager. Ignored on other platforms.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 use callback::go_to_parent;
+use callback::setimg;
 use files::update_file_tree;
 use image::{DynamicImage, ImageReader};
 use logging::setup_logs;
@@ -30,7 +31,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let img: Box<DynamicImage> = Box::default();
     let img_ref = Arc::new(Mutex::new(img));
-    let img_ref_clone = Arc::clone(&img_ref);
     let img_ref_clone_roll = Arc::clone(&img_ref);
 
     // Trigger the initial reload
@@ -88,42 +88,18 @@ fn main() -> Result<(), Box<dyn Error>> {
     ui.on_setimg({
         let ui_handle = ui.as_weak();
         move |img_path| {
-            log::warn!("set-img");
+            let ot = Instant::now();
+
             let ui = ui_handle.unwrap();
+            let result = setimg(img_path.as_ref(), &Arc::clone(&img_ref)).unwrap_or_default();
 
-            // let mut img_path = ui.get_path().to_string();
-            // img_path.push_str(title.as_ref());
+            // Update on the UI
             let st = Instant::now();
+            ui.set_original_image(result.clone());
+            log::debug!("Time to set: {:#?}", st.elapsed());
 
-            let img = ImageReader::open(&img_path).unwrap().decode();
-
-            log::info!("Time to open: {:#?}", st.elapsed());
-            if img.is_err() {
-                log::error!("Error opening {}", img_path);
-                return Image::default();
-            }
-
-            let img_copy = img.unwrap();
-            {
-                let inner = &img_ref_clone;
-                let mut dyn_img = inner.lock().unwrap();
-                *dyn_img = Box::new(img_copy.clone());
-            }
-
-            let unwrapped = img_copy.into_rgba8();
-            log::info!("Time to into_rgba8: {:#?}", st.elapsed());
-            let real = {
-                slint::Image::from_rgba8(slint::SharedPixelBuffer::clone_from_slice(
-                    unwrapped.as_raw(),
-                    unwrapped.width(),
-                    unwrapped.height(),
-                ))
-            };
-            log::info!("Time to clone: {:#?}", st.elapsed());
-            ui.set_original_image(real.clone());
-            log::info!("Time to set: {:#?}", st.elapsed());
-            log::warn!("Loaded: {}", img_path);
-            real
+            log::warn!("set-img took: {:#?}", ot.elapsed());
+            result
         }
     });
 
