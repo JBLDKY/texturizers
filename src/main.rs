@@ -20,8 +20,13 @@ pub const DEFAULT_WIDTH_APP: u32 = 1200;
 pub const DEFAULT_HEIGHT_APP: u32 = 800;
 
 fn update_path(ui: &AppWindow, path: impl AsRef<Path>) {
+    // Parse the path to a string
     let parsed = path.as_ref().to_str().unwrap_or_default().to_string();
+
+    // Append '/' if it does not yet end with '/' just to be consistent
     let with_forward_slash = maybe_add_character(parsed, '/');
+
+    // Update the source of truth path
     ui.set_path(with_forward_slash.into());
 }
 
@@ -52,6 +57,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let img_ref_clone = Arc::clone(&img_ref);
     let img_ref_clone_roll = Arc::clone(&img_ref);
 
+    // Trigger the initial reload
     let timer = Timer::default();
     timer.start(
         TimerMode::SingleShot,
@@ -66,11 +72,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         let ui_handle = ui.as_weak();
         move || {
             log::warn!("go-to-parent");
-            go_to_parent(&ui_handle.unwrap());
+            let app_window = ui_handle.unwrap();
 
-            let ui = ui_handle.unwrap();
+            // go-to-parent handler
+            go_to_parent(&app_window);
 
-            ui.get_path()
+            // Return the String path that we set earlier
+            // TODO: check if this is necessary
+            app_window.get_path()
         }
     });
 
