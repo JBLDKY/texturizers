@@ -1,4 +1,5 @@
 import { ComboBox, SpinBox, Button, CheckBox, Slider, LineEdit, ScrollView, ListView, HorizontalBox, VerticalBox, GridBox, StandardButton, Palette } from "std-widgets.slint";
+import { Recipe } from "recipe.slint";
 
 @rust-attr(derive(serde::Serialize, serde::Deserialize))
 export struct TodoItem  {
@@ -42,114 +43,183 @@ export component AppWindow inherits Window {
 
     in-out property <[TodoItem]> todo-model: [];
     title: "Texturize.rs";
-    VerticalBox {
-        HorizontalLayout {
-            height: 30px;
+    in-out property <int> active-tab;
+    VerticalLayout {
+        tab_bar := HorizontalLayout {
+            spacing: 3px;
             Button {
-                private property <string> parent;
-                parent: "";
-                text: "🠄";
+                text: "Texture";
                 clicked => {
-                    // side-effects:
-                    // 1. Updates the root.path to the parent
-                    // 2. Refreshes the filetree
-                    self.parent = go-to-parent();
-                    le.text = root.path;
+                    root.active-tab = 0;
                 }
             }
 
-            le := LineEdit {
-                text: root.path;
-
-                init() => {
-                    self.focus();
-                    // side-effects:
-                    // 1. Refreshes the filetree
-                    root.update-file-tree();
-                }
-                edited(new) => {
-                    root.path = "\{new}";
-                    // side-effects:
-                    // 1. Refreshes the filetree
-                    root.update-file-tree();
+            Button {
+                text: "Settings";
+                clicked => {
+                    root.active-tab = 1;
                 }
             }
         }
 
-        HorizontalLayout {
-            ListView {
-                for todo in root.todo-model: HorizontalLayout {
-                    padding-bottom: 3px;
-                    Button {
-                        private property <bool> was-clicked;
-                        in-out property <bool> is-dir;
-                        was-clicked: false;
+        Rectangle {
+            clip: true;
+            Rectangle {
+                x: root.active-tab == 0 ? 0 : root.active-tab < 0 ? - self.width - 1px : parent.width + 1px;
+                animate x {
+                    duration: 125ms;
+                    easing: ease;
+                }
+                VerticalBox {
+
+                    HorizontalLayout {
                         height: 30px;
-                        width: parent.width;
-                        text: todo.title;
+                        Button {
+                            private property <string> parent;
+                            parent: "";
+                            text: "🠄";
+                            clicked => {
+                    // side-effects:
+                    // 1. Updates the root.path to the parent
+                    // 2. Refreshes the filetree
+                    self.parent = go-to-parent();
+                                le.text = root.path;
+                            }
+                        }
 
-                        checked: todo.checked;
-                        is-dir: todo.is-dir;
-                        primary: self.is-dir;
+                        le := LineEdit {
+                            text: root.path;
 
-                        clicked() => {
-                            if (self.was-clicked && self.is-dir) {
-                                root.path = todo.full-path;
-                                le.text = todo.full-path;
+                            init() => {
+                                self.focus();
+                    // side-effects:
+                    // 1. Refreshes the filetree
+                    root.update-file-tree();
+                            }
+                            edited(new) => {
+                                root.path = "\{new}";
+                    // side-effects:
+                    // 1. Refreshes the filetree
+                    root.update-file-tree();
+                            }
+                        }
+                    }
+
+                    HorizontalLayout {
+                        ListView {
+                            for todo in root.todo-model: HorizontalLayout {
+                                padding-bottom: 3px;
+                                Button {
+                                    private property <bool> was-clicked;
+                                    in-out property <bool> is-dir;
+                                    was-clicked: false;
+                                    height: 30px;
+                                    width: parent.width;
+                                    text: todo.title;
+
+                                    checked: todo.checked;
+                                    is-dir: todo.is-dir;
+                                    primary: self.is-dir;
+
+                                    clicked() => {
+                                        if (self.was-clicked && self.is-dir) {
+                                            root.path = todo.full-path;
+                                            le.text = todo.full-path;
                                 // side-effects:
                                 // 1. Refreshes the filetree
                                 root.update-file-tree();
+                                        }
+                                        root.setimg(todo.full-path);
+                                        self.was-clicked = true;
+                                    }
+                                }
                             }
-                            root.setimg(todo.full-path);
-                            self.was-clicked = true;
+                        }
+
+                        VerticalBox {
+                            HorizontalBox {
+                                x := Slider {
+                                    private property <float> cur-x;
+                                    cur-x: 0.0;
+                                    value: 0.0;
+                                    minimum: 0.0;
+                                    maximum: 1.0;
+                                    step: 0.05;
+
+                                    changed(value) => {
+                                        if (value - self.cur-x != 0) {
+                                            roll-x(value - self.cur-x);
+                                        }
+                                        self.cur-x = value;
+                                    }
+                                }
+
+                                y := Slider {
+                                    private property <float> cur-y;
+                                    cur-y: 0.0;
+                                    value: 0.0;
+                                    minimum: 0.0;
+                                    maximum: 1.0;
+                                    step: 0.05;
+
+                                    changed(value) => {
+                                        if (value - self.cur-y != 0) {
+                                            roll-y(value - self.cur-y);
+                                        }
+                                        self.cur-y = value;
+                                    }
+                                }
+                            }
+
+                            HorizontalBox {
+
+                                min-width: 1000px;
+                                max-width: 1200px;
+
+                                original := Image {
+                                    image-fit: fill;
+                                    source: root.image;
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            VerticalBox {
-                HorizontalBox {
-                    x := Slider {
-                        private property <float> cur-x;
-                        cur-x: 0.0;
-                        value: 0.0;
-                        minimum: 0.0;
-                        maximum: 1.0;
-                        step: 0.05;
-
-                        changed(value) => {
-                            if (value - self.cur-x != 0) {
-                                roll-x(value - self.cur-x);
-                            }
-                            self.cur-x = value;
-                        }
-                    }
-
-                    y := Slider {
-                        private property <float> cur-y;
-                        cur-y: 0.0;
-                        value: 0.0;
-                        minimum: 0.0;
-                        maximum: 1.0;
-                        step: 0.05;
-
-                        changed(value) => {
-                            if (value - self.cur-y != 0) {
-                                roll-y(value - self.cur-y);
-                            }
-                            self.cur-y = value;
-                        }
-                    }
+            Rectangle {
+                x: root.active-tab == 1 ? 0 : root.active-tab < 1 ? - self.width - 1px : parent.width + 1px;
+                animate x {
+                    duration: 125ms;
+                    easing: ease;
                 }
 
-                HorizontalBox {
+                VerticalBox {
 
-                    min-width: 1000px;
-                    max-width: 1200px;
+                    Text {
+                        text: "Output dir:";
+                    }
 
-                    original := Image {
-                        image-fit: fill;
-                        source: root.image;
+                    LineEdit {
+                        text: root.path;
+                    }
+
+                    ListView {
+                        for data in [
+                            { text: "Scale by W" },
+                            { text: "Scale by H" },
+                            { text: "x512" },
+                            { text: "x256" },
+                            { text: "x128" },
+                            { text: "x64" },
+                            { text: "x32" },
+                            { text: "x16" },
+                        ]: CheckBox {
+                            padding-left: 20px;
+                            height: 30px;
+                            width: parent.width;
+                            text: data.text;
+                            checked: true;
+                        }
                     }
                 }
             }
