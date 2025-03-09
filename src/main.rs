@@ -5,7 +5,7 @@ use callback::{
     dynamic_image_to_slint_image, go_to_parent, setimg, update_boxed_image, update_file_tree,
 };
 use core::f32;
-use files::{glob_string_from_path, list_dir};
+use files::list_dir;
 use image::{imageops, DynamicImage, GenericImageView, ImageBuffer, ImageReader};
 use logging::setup_logs;
 use slint::{ComponentHandle, Model, PhysicalSize, Timer, TimerMode, VecModel};
@@ -41,8 +41,8 @@ struct Config {
 
 impl Config {
     fn from_raw(raw: &VecModel<bool>) -> Self {
-        let mut iiterator: Vec<bool> = raw.iter().collect();
-        let mut iterator = iiterator.iter();
+        let iiterator: Vec<bool> = raw.iter().collect();
+        let iterator = iiterator.iter();
         log::warn!("{:#?}", iiterator);
 
         Self {
@@ -84,7 +84,7 @@ impl Config {
         res
     }
 
-    fn x128_enabled(&self) -> bool {
+    const fn x128_enabled(&self) -> bool {
         self.x128
     }
 }
@@ -143,7 +143,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 return;
             }
 
-            let mut new;
+            let new;
             {
                 let boxed_image = {
                     &mut img_ref_for_export
@@ -175,7 +175,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                 for file in files {
                     let res = ImageReader::open(file);
-                    if let Err(_) = res {
+                    if res.is_err() {
                         continue;
                     }
                     let dec = res.unwrap().decode();
