@@ -79,10 +79,16 @@ fn main() -> Result<(), Box<dyn Error>> {
             let w = new.width() as i32;
             let h = new.height() as i32;
 
-            let travelled_x = (end.x - start.x) % w;
+            let mut travelled_x = (end.x - start.x) % w;
+            if end.x < start.x {
+                travelled_x = -travelled_x;
+            }
             let pdx = travelled_x as f32 / w as f32;
 
-            let travelled_y = (end.y - start.y) % h;
+            let mut travelled_y = (end.y - start.y) % h;
+            if end.y < start.y {
+                travelled_y = -travelled_y;
+            }
             let pdy = travelled_y as f32 / w as f32;
 
             new = roll_x(&new, pdx);
