@@ -21,6 +21,7 @@ export component AppWindow inherits Window {
     in-out property <Point> image-release-click: { x: 0, y: 0 };
     callback go-to-parent() -> string;
     callback glob-path();
+    callback roll-image(image: image);
     callback setimg(path: string) -> image;
 
     in property original-image <=> original.source;
@@ -113,7 +114,11 @@ export component AppWindow inherits Window {
                                 root.image-release-click = get-mouse-point();
                                 debug("End:");
                                 debug(root.image-release-click);
+                                roll-image(original.source);
                             }
+                        }
+
+                        moved => {
                         }
                     }
                 }

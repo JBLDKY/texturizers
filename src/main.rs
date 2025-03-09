@@ -4,12 +4,15 @@
 use anyhow::anyhow;
 use env_logger::Builder;
 use glob::glob;
-use image::ImageReader;
+use image::{load_from_memory, DynamicImage, ImageFormat, ImageReader};
 use log::LevelFilter;
-use slint::{ComponentHandle, Image, Weak};
+use slint::{ComponentHandle, Image, ModelRc, Weak};
 use slint::{Model, PhysicalSize, VecModel};
 use slint::{Timer, TimerMode};
+use std::io::{BufReader, Cursor};
 use std::path::Path;
+use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use std::{error::Error, path::PathBuf};
 
@@ -21,6 +24,10 @@ pub const DEFAULT_HEIGHT_APP: u32 = 800;
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logging();
     let ui = AppWindow::new()?;
+    let img: Box<DynamicImage> = Box::default();
+    let img_ref = Arc::new(Mutex::new(img));
+    let img_ref_clone = Arc::clone(&img_ref);
+    let img_ref_clone_roll = Arc::clone(&img_ref);
 
     let timer = Timer::default();
     timer.start(
@@ -53,6 +60,32 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     });
 
+    ui.on_roll_image({
+        let ui_handle = ui.as_weak();
+        move |_| {
+            log::warn!("roll-image");
+            let ui = ui_handle.unwrap();
+
+            {
+                let inner = &img_ref_clone_roll;
+                let mut dyn_img = inner.lock().unwrap();
+                let new_img = dyn_img.flipv();
+                *dyn_img = Box::new(new_img.clone());
+                drop(dyn_img);
+
+                let unwrapped = new_img.into_rgba8();
+                let real = {
+                    slint::Image::from_rgba8(slint::SharedPixelBuffer::clone_from_slice(
+                        unwrapped.as_raw(),
+                        unwrapped.width(),
+                        unwrapped.height(),
+                    ))
+                };
+                ui.set_original_image(real);
+            }
+        }
+    });
+
     ui.on_setimg({
         let ui_handle = ui.as_weak();
         move |img_path| {
@@ -70,7 +103,15 @@ fn main() -> Result<(), Box<dyn Error>> {
                 log::error!("Error opening {}", img_path);
                 return Image::default();
             }
-            let unwrapped = img.unwrap().into_rgba8();
+
+            let img_copy = img.unwrap();
+            {
+                let inner = &img_ref_clone;
+                let mut dyn_img = inner.lock().unwrap();
+                *dyn_img = Box::new(img_copy.clone());
+            }
+
+            let unwrapped = img_copy.into_rgba8();
             log::info!("Time to into_rgba8: {:#?}", st.elapsed());
             let real = {
                 slint::Image::from_rgba8(slint::SharedPixelBuffer::clone_from_slice(
