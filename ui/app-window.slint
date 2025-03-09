@@ -2,10 +2,11 @@ import { ComboBox, SpinBox, Button, CheckBox, Slider, LineEdit, ScrollView, List
 import { Recipe } from "recipe.slint";
 
 @rust-attr(derive(serde::Serialize, serde::Deserialize))
-export struct TodoItem  {
+export struct FileItem  {
     title: string,
     checked: bool,
     is-dir: bool,
+
     full_path: string,
 }
 
@@ -19,13 +20,26 @@ export component AppWindow inherits Window {
     in-out property <string> path: "/home/jord/coding/texturizers";
 
     // Placeholder image to display the logo until the user selects his own image
-    private property <string> logo-path: "./TexturizersLogo.png";
-    in-out property <image> image: @image-url("./TexturizersLogo.png");
+    private property <string> logo-path: "TexturizersLogo.png";
+    in-out property <image> image: @image-url("TexturizersLogo.png");
+    in-out property <string> image-path: "TexturizersLogo.png";
 
     // Mouse
     in-out property <Point> image-initial-click: { x: 0, y: 0 };
     in-out property <Point> image-release-click: { x: 0, y: 0 };
 
+    public pure function config() -> [bool] {
+        return [
+            x16.checked,
+            x32.checked,
+            x64.checked,
+            x128.checked,
+            x256.checked,
+            x512.checked,
+            w.checked,
+            h.checked
+        ];
+    }
 
     // User clicked the back / go up button to change directory
     callback go-to-parent() -> string;
@@ -36,13 +50,20 @@ export component AppWindow inherits Window {
     // Updates the displayed image as well as the Boxed / cached image
     callback setimg(path: string);
 
+    // save an image to the out-dir
+    callback export(nearest: bool, output-dir: string, name: string, config: [bool]);
+
     //Image manipulation
+    in-out property <bool> nearest: false;
+    in-out property <string> output-dir: root.path;
+    in-out property <bool> everything-in-dir: false;
+
     callback roll-y(y: float);
     callback roll-x(x: float);
 
     in property original-image <=> original.source;
 
-    in-out property <[TodoItem]> todo-model: [];
+    in-out property <[FileItem]> file-tree-model: [];
     title: "Texturize.rs";
     in-out property <int> active-tab;
     VerticalLayout {
@@ -94,22 +115,23 @@ export component AppWindow inherits Window {
 
                             init() => {
                                 self.focus();
-                    // side-effects:
-                    // 1. Refreshes the filetree
-                    root.update-file-tree();
+                                // side-effects:
+                                // 1. Refreshes the filetree
+                                root.update-file-tree();
                             }
+
                             edited(new) => {
                                 root.path = "\{new}";
-                    // side-effects:
-                    // 1. Refreshes the filetree
-                    root.update-file-tree();
+                                // side-effects:
+                                // 1. Refreshes the filetree
+                                root.update-file-tree();
                             }
                         }
                     }
 
                     HorizontalLayout {
                         ListView {
-                            for todo in root.todo-model: HorizontalLayout {
+                            for file in root.file-tree-model: HorizontalLayout {
                                 padding-bottom: 3px;
                                 Button {
                                     private property <bool> was-clicked;
@@ -117,21 +139,21 @@ export component AppWindow inherits Window {
                                     was-clicked: false;
                                     height: 30px;
                                     width: parent.width;
-                                    text: todo.title;
+                                    text: file.title;
 
-                                    checked: todo.checked;
-                                    is-dir: todo.is-dir;
+                                    checked: file.checked;
+                                    is-dir: file.is-dir;
                                     primary: self.is-dir;
 
                                     clicked() => {
                                         if (self.was-clicked && self.is-dir) {
-                                            root.path = todo.full-path;
-                                            le.text = todo.full-path;
+                                            root.path = file.full-path;
+                                            le.text = file.full-path;
                                 // side-effects:
                                 // 1. Refreshes the filetree
                                 root.update-file-tree();
                                         }
-                                        root.setimg(todo.full-path);
+                                        root.setimg(file.full-path);
                                         self.was-clicked = true;
                                     }
                                 }
@@ -175,15 +197,31 @@ export component AppWindow inherits Window {
 
                             HorizontalBox {
                                 height: 30px;
-                                CheckBox {
+                                nearest := CheckBox {
                                     height: parent.height;
                                     text: "Nearest";
-                                    checked: true;
+                                    checked: false;
+                                    toggled() => {
+                                        root.nearest = !root.nearest;
+                                    }
+                                }
+
+                                all-in-dir := CheckBox {
+                                    height: parent.height;
+                                    text: "Everything in dir";
+                                    checked: false;
+                                    toggled() => {
+                                        root.everything-in-dir = !root.everything-in-dir;
+                                    }
                                 }
 
                                 Button {
                                     height: parent.height;
                                     text: "Export";
+
+                                    clicked => {
+                                        export(root.nearest, root.output-dir, root.image-path, root.config());
+                                    }
                                 }
                             }
 
@@ -203,39 +241,92 @@ export component AppWindow inherits Window {
             }
 
             Rectangle {
+                padding-left: 20px;
                 x: root.active-tab == 1 ? 0 : root.active-tab < 1 ? - self.width - 1px : parent.width + 1px;
                 animate x {
                     duration: 125ms;
                     easing: ease;
                 }
 
-                VerticalBox {
+                VerticalLayout {
+                    height: 500px;
 
                     Text {
                         text: "Output dir: ";
+                        height: 20px;
                     }
 
                     LineEdit {
                         text: root.path;
+                        height: 30px;
+
+                        edited(text) => {
+                            root.output-dir = text;
+                        }
                     }
 
-                    ListView {
-                        for data in [
-                            { text: "Scale by W" },
-                            { text: "Scale by H" },
-                            { text: "x512" },
-                            { text: "x256" },
-                            { text: "x128" },
-                            { text: "x64" },
-                            { text: "x32" },
-                            { text: "x16" },
-                        ]: CheckBox {
-                            padding-left: 20px;
-                            height: 30px;
-                            width: parent.width;
-                            text: data.text;
-                            checked: true;
-                        }
+                    h := CheckBox {
+                        padding-left: 20px;
+                        height: 30px;
+                        width: parent.width;
+                        text: "Scale by height";
+                        checked: true;
+                    }
+
+                    w := CheckBox {
+                        padding-left: 20px;
+                        height: 30px;
+                        width: parent.width;
+                        text: "Scale by width";
+                        checked: true;
+                    }
+
+                    x16 := CheckBox {
+                        padding-left: 20px;
+                        height: 30px;
+                        width: parent.width;
+                        text: "x16";
+                        checked: true;
+                    }
+
+                    x32 := CheckBox {
+                        padding-left: 20px;
+                        height: 30px;
+                        width: parent.width;
+                        text: "x32";
+                        checked: true;
+                    }
+
+                    x64 := CheckBox {
+                        padding-left: 20px;
+                        height: 30px;
+                        width: parent.width;
+                        text: "x64";
+                        checked: true;
+                    }
+
+                    x128 := CheckBox {
+                        padding-left: 20px;
+                        height: 30px;
+                        width: parent.width;
+                        text: "x128";
+                        checked: true;
+                    }
+
+                    x256 := CheckBox {
+                        padding-left: 20px;
+                        height: 30px;
+                        width: parent.width;
+                        text: "x256";
+                        checked: true;
+                    }
+
+                    x512 := CheckBox {
+                        padding-left: 20px;
+                        height: 30px;
+                        width: parent.width;
+                        text: "x512";
+                        checked: true;
                     }
                 }
             }

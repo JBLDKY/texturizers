@@ -1,7 +1,7 @@
 #![warn(clippy::pedantic, clippy::nursery)]
 // Prevent console window in addition to Slint window in Windows release builds when, e.g., starting the app via file manager. Ignored on other platforms.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-use crate::app::TodoItem;
+use crate::app::FileItem;
 use crate::path::maybe_add_character;
 use anyhow::anyhow;
 use glob::glob;
@@ -9,9 +9,9 @@ use std::path::Path;
 use std::path::PathBuf;
 
 /// Constructs a button entry for the filetree from a path
-pub fn filetree_entry_from_path(path: impl AsRef<Path>) -> TodoItem {
+pub fn filetree_entry_from_path(path: impl AsRef<Path>) -> FileItem {
     let file = path.as_ref();
-    TodoItem {
+    FileItem {
         title: filetree_entry_name_from_path(file).into(),
         checked: false,
         is_dir: file.is_dir(),

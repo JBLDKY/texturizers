@@ -7,8 +7,9 @@ use callback::{
 use core::f32;
 use image::{imageops, DynamicImage, GenericImageView, ImageBuffer};
 use logging::setup_logs;
-use slint::{ComponentHandle, PhysicalSize, Timer, TimerMode};
+use slint::{ComponentHandle, Model, PhysicalSize, Timer, TimerMode, VecModel};
 use std::error::Error;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 mod app;
@@ -22,9 +23,99 @@ pub const TIME_TO_INITIALIZE_APP: u64 = 500;
 pub const DEFAULT_WIDTH_APP: u32 = 1200;
 pub const DEFAULT_HEIGHT_APP: u32 = 800;
 
+#[derive(Debug)]
+struct Config {
+    x16: bool,
+    x32: bool,
+    x64: bool,
+    x128: bool,
+    x256: bool,
+    x512: bool,
+    w: bool,
+    h: bool,
+    format: String,
+}
+
+impl Config {
+    fn from_raw(raw: &VecModel<bool>) -> Self {
+        let mut iiterator: Vec<bool> = raw.iter().collect();
+        let mut iterator = iiterator.iter();
+        log::warn!("{:#?}", iiterator);
+
+        Self {
+            x16: iiterator[0],
+            x32: iiterator[1],
+            x64: iiterator[2],
+            x128: iiterator[3],
+            x256: iiterator[4],
+            x512: iiterator[5],
+            w: iiterator[6],
+            h: iiterator[7],
+            format: "png".to_string(),
+            // x16: *iterator.nth(0).unwrap_or(&false),
+            // x32: *iterator.nth(1).unwrap_or(&false),
+            // x64: *iterator.nth(2).unwrap_or(&false),
+            // x128: *iterator.nth(3).unwrap_or(&false),
+            // x256: *iterator.nth(4).unwrap_or(&false),
+            // x512: *iterator.nth(5).unwrap_or(&false),
+            // w: *iterator.nth(6).unwrap_or(&false),
+            // h: *iterator.nth(7).unwrap_or(&false),
+            // format: ".png".to_string(),
+        }
+    }
+
+    fn nums(&self) -> Vec<usize> {
+        let mut res = vec![];
+
+        if self.x16 {
+            res.push(16);
+        }
+        if self.x32 {
+            res.push(32);
+        }
+        if self.x64 {
+            res.push(64);
+        }
+        if self.x128 {
+            res.push(128);
+        }
+        if self.x256 {
+            res.push(256);
+        }
+        if self.x512 {
+            res.push(512);
+        }
+        res
+    }
+
+    fn x128_enabled(&self) -> bool {
+        self.x128
+    }
+}
+
+#[derive(Ord, PartialOrd, Eq, PartialEq, Debug)]
+enum ConfigItem {
+    X16,
+    X32,
+    X64,
+    X128,
+    X256,
+    X512,
+    W,
+    H,
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logs();
     let ui = AppWindow::new()?;
+    ui.on_update_file_tree({
+        let ui_handle = ui.as_weak();
+        move || {
+            log::warn!("glob-path");
+            update_file_tree(&ui_handle.unwrap());
+        }
+    });
+
     ui.window()
         .set_size(PhysicalSize::new(DEFAULT_WIDTH_APP, DEFAULT_HEIGHT_APP));
 
@@ -32,6 +123,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let img_ref = Arc::new(Mutex::new(img));
     let img_ref_for_roll_y = Arc::clone(&img_ref);
     let img_ref_for_roll_x = Arc::clone(&img_ref);
+    let img_ref_for_export = Arc::clone(&img_ref);
 
     // TODO: Cleanup
     setimg("./TexturizersLogo.png", &Arc::clone(&img_ref))?;
@@ -46,6 +138,91 @@ fn main() -> Result<(), Box<dyn Error>> {
             move || update_file_tree(&ui_handle)
         },
     );
+
+    ui.on_export({
+        let ui_handle = ui.as_weak();
+        move |nearest, output_dir, name, config| {
+            let ui = ui_handle.unwrap();
+            let mut parsed_output_dir = PathBuf::from(output_dir.to_string());
+            if !parsed_output_dir.is_dir() {
+                log::error!(
+                    "Output dir {} is not a valid directory",
+                    parsed_output_dir.display()
+                );
+                return;
+            }
+
+            let mut new;
+            {
+                let boxed_image = {
+                    &mut img_ref_for_export
+                        .lock()
+                        .expect("Failed to lock mutex")
+                        .clone()
+                };
+
+                new = *boxed_image.clone();
+            }
+
+            parsed_output_dir.push(PathBuf::from(name.to_string()));
+            log::info!("New name: {}", parsed_output_dir.display());
+
+            let settings = config
+                .as_any()
+                .downcast_ref::<VecModel<bool>>()
+                .expect("Failed to downcast config");
+
+            let config = Config::from_raw(settings);
+
+            let (w, h) = new.dimensions();
+            log::info!("{:#?}", config.x128_enabled());
+
+            if config.w && w > 0 {
+                for num in config.nums() {
+                    let factor = w as usize / num;
+                    let resized =
+                        new.resize(num as u32, h * factor as u32, imageops::FilterType::Nearest);
+                    let suffix = format!(
+                        "{}_w_x{}_w{}_h{}.{}",
+                        name,
+                        num,
+                        resized.width(),
+                        resized.height(),
+                        config.format
+                    );
+
+                    let mut new_name = parsed_output_dir.clone();
+                    new_name.push(suffix);
+
+                    log::debug!("Saving (w): {}", new_name.display());
+                    resized.save(new_name);
+                }
+            }
+
+            log::debug!("config.h: {}, h: {}", config.h, h);
+            if config.h && h > 0 {
+                for num in config.nums() {
+                    let factor = h as usize / num;
+                    let resized =
+                        new.resize(w * factor as u32, num as u32, imageops::FilterType::Nearest);
+                    let suffix = format!(
+                        "{}_w_x{}_w{}_h{}.{}",
+                        name,
+                        num,
+                        resized.width(),
+                        resized.height(),
+                        config.format
+                    );
+
+                    let mut new_name = parsed_output_dir.clone();
+                    new_name.push(suffix);
+
+                    log::debug!("Saving (h): {}", new_name.display());
+                    resized.save(new_name);
+                }
+            }
+        }
+    });
 
     ui.on_roll_y({
         let ui_handle = ui.as_weak();
@@ -108,6 +285,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         let ui_handle = ui.as_weak();
         move |img_path| {
             let ot = Instant::now();
+            let ui = ui_handle.unwrap();
+            ui.set_image_path(img_path.clone());
 
             let ui = ui_handle.unwrap();
             let result = setimg(img_path.as_ref(), &Arc::clone(&img_ref)).unwrap_or_default();
@@ -118,14 +297,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             log::debug!("Time to set: {:#?}", st.elapsed());
 
             log::warn!("set-img took: {:#?}", ot.elapsed());
-        }
-    });
-
-    ui.on_update_file_tree({
-        let ui_handle = ui.as_weak();
-        move || {
-            log::warn!("glob-path");
-            update_file_tree(&ui_handle.unwrap());
         }
     });
 

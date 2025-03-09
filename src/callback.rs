@@ -1,7 +1,7 @@
 #![warn(clippy::pedantic, clippy::nursery)]
 // Prevent console window in addition to Slint window in Windows release builds when, e.g., starting the app via file manager. Ignored on other platforms.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-use crate::app::{AppWindow, TodoItem};
+use crate::app::{AppWindow, FileItem};
 use crate::files::{filetree_entry_from_path, list_dir, sort_filetree};
 use crate::path::update_path;
 use image::{DynamicImage, ImageReader};
@@ -18,10 +18,10 @@ pub fn update_file_tree(ui: &AppWindow) {
     let files = sort_filetree(list_dir(ui.get_path().into()));
 
     // Get a ref to the filetre model
-    let filetree = ui.get_todo_model();
+    let filetree = ui.get_file_tree_model();
     let filetree = filetree
         .as_any()
-        .downcast_ref::<VecModel<TodoItem>>()
+        .downcast_ref::<VecModel<FileItem>>()
         .expect("The ui has a VecModel; the list of images");
 
     // Empty the current items
