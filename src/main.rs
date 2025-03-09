@@ -127,7 +127,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     });
 
-    ui.on_glob_path({
+    ui.on_update_file_tree({
         let ui_handle = ui.as_weak();
         move || {
             log::warn!("glob-path");

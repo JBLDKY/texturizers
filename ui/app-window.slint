@@ -20,7 +20,7 @@ export component AppWindow inherits Window {
     in-out property <Point> image-initial-click: { x: 0, y: 0 };
     in-out property <Point> image-release-click: { x: 0, y: 0 };
     callback go-to-parent() -> string;
-    callback glob-path();
+    callback update-file-tree();
     callback roll-image(image: image);
     callback setimg(path: string) -> image;
 
@@ -36,8 +36,10 @@ export component AppWindow inherits Window {
                 parent: "";
                 text: "🠄";
                 clicked => {
+                    // side-effects:
+                    // 1. Updates the root.path to the parent
+                    // 2. Refreshes the filetree
                     self.parent = go-to-parent();
-                    debug("New: " + self.parent);
                     le.text = root.path;
                 }
             }
@@ -47,11 +49,15 @@ export component AppWindow inherits Window {
 
                 init() => {
                     self.focus();
-                    root.glob-path();
+                    // side-effects:
+                    // 1. Refreshes the filetree
+                    root.update-file-tree();
                 }
                 edited(new) => {
                     root.path = "\{new}";
-                    root.glob-path();
+                    // side-effects:
+                    // 1. Refreshes the filetree
+                    root.update-file-tree();
                 }
             }
         }
@@ -76,9 +82,11 @@ export component AppWindow inherits Window {
                             if (self.was-clicked && self.is-dir) {
                                 root.path = todo.full-path;
                                 le.text = todo.full-path;
-                                root.glob-path();
+                                // side-effects:
+                                // 1. Refreshes the filetree
+                                root.update-file-tree();
                             }
-                            setimg(todo.full-path);
+                            root.setimg(todo.full-path);
                             self.was-clicked = true;
                         }
                     }
