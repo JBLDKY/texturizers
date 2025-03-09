@@ -35,7 +35,8 @@ export component AppWindow inherits Window {
     callback setimg(path: string);
 
     //Image manipulation
-    callback roll-image(start: Point, end: Point);
+    callback roll-y(y: float);
+    callback roll-x(x: float);
 
     in property original-image <=> original.source;
 
@@ -106,39 +107,45 @@ export component AppWindow inherits Window {
                 }
             }
 
-            HorizontalBox {
+            VerticalBox {
+                HorizontalBox {
+                    x := Slider {
+                        private property <float> cur-x;
+                        cur-x: 0.0;
+                        value: 0.0;
+                        minimum: 0.0;
+                        maximum: 1.0;
+                        step: 0.05;
 
-                min-width: 1000px;
-                max-width: 1200px;
-
-                original := Image {
-                    image-fit: fill;
-                    source: root.image;
-
-                    area := TouchArea {
-                        pure function get-mouse-point() -> Point {
-                            return { x: self.mouse-x / 1px, y: self.mouse-y / 1px };
+                        changed(value) => {
+                            roll-x(value - self.cur-x);
+                            self.cur-x = value;
                         }
+                    }
 
-                        width: parent.width;
-                        height: parent.height;
+                    y := Slider {
+                        private property <float> cur-y;
+                        cur-y: 0.0;
+                        value: 0.0;
+                        minimum: 0.0;
+                        maximum: 1.0;
+                        step: 0.05;
 
-                        pointer-event(event) => {
-                            if (event.button == PointerEventButton.left && event.kind == PointerEventKind.down) {
-                                root.image-initial-click = get-mouse-point();
-                                debug("Start:");
-                                debug(root.image-initial-click);
-                            }
-                            if (event.button == PointerEventButton.left && event.kind == PointerEventKind.up) {
-                                root.image-release-click = get-mouse-point();
-                                debug("End:");
-                                debug(root.image-release-click);
-                                roll-image(root.image-initial-click, root.image-release-click);
-                            }
+                        changed(value) => {
+                            roll-y(value - self.cur-y);
+                            self.cur-y = value;
                         }
+                    }
+                }
 
-                        moved => {
-                        }
+                HorizontalBox {
+
+                    min-width: 1000px;
+                    max-width: 1200px;
+
+                    original := Image {
+                        image-fit: fill;
+                        source: root.image;
                     }
                 }
             }
