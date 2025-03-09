@@ -35,7 +35,7 @@ export component AppWindow inherits Window {
     callback setimg(path: string);
 
     //Image manipulation
-    callback roll-image(image: image);
+    callback roll-image(start: Point, end: Point);
 
     in property original-image <=> original.source;
 
@@ -123,18 +123,17 @@ export component AppWindow inherits Window {
                         width: parent.width;
                         height: parent.height;
 
-                        clicked => {
-                            root.image-initial-click = get-mouse-point();
-                            debug("Start:");
-                            debug(root.image-initial-click);
-                        }
-
                         pointer-event(event) => {
+                            if (event.button == PointerEventButton.left && event.kind == PointerEventKind.down) {
+                                root.image-initial-click = get-mouse-point();
+                                debug("Start:");
+                                debug(root.image-initial-click);
+                            }
                             if (event.button == PointerEventButton.left && event.kind == PointerEventKind.up) {
                                 root.image-release-click = get-mouse-point();
                                 debug("End:");
                                 debug(root.image-release-click);
-                                roll-image(original.source);
+                                roll-image(root.image-initial-click, root.image-release-click);
                             }
                         }
 

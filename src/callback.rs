@@ -82,13 +82,13 @@ pub fn setimg(
 
 // TODO: Move these elsewhere?
 #[inline]
-fn update_boxed_image(image: &DynamicImage, img_ref: &Arc<Mutex<Box<DynamicImage>>>) {
+pub fn update_boxed_image(image: &DynamicImage, img_ref: &Arc<Mutex<Box<DynamicImage>>>) {
     let boxed_image = &mut img_ref.lock().expect("Failed to lock mutex");
     **boxed_image = Box::new(image.clone());
 }
 
 #[inline]
-fn dynamic_image_to_slint_image(image: DynamicImage) -> Image {
+pub fn dynamic_image_to_slint_image(image: DynamicImage) -> Image {
     let rgba8 = image.into_rgba8();
     Image::from_rgba8(SharedPixelBuffer::clone_from_slice(
         rgba8.as_raw(),
