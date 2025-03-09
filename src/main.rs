@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     ui.on_roll_y({
         let ui_handle = ui.as_weak();
         move |y| {
-            let mut new;
+            let new;
             {
                 let boxed_image = {
                     &mut img_ref_for_roll_y
@@ -67,7 +67,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     ui.on_roll_x({
         let ui_handle = ui.as_weak();
         move |x| {
-            let mut new;
+            let new;
             {
                 let boxed_image = {
                     &mut img_ref_for_roll_x
