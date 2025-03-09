@@ -1,14 +1,10 @@
 #![warn(clippy::pedantic, clippy::nursery)]
 // Prevent console window in addition to Slint window in Windows release builds when, e.g., starting the app via file manager. Ignored on other platforms.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-use callback::go_to_parent;
-use callback::setimg;
-use files::update_file_tree;
-use image::{DynamicImage, ImageReader};
+use callback::{go_to_parent, setimg, update_file_tree};
+use image::DynamicImage;
 use logging::setup_logs;
-use slint::Image;
-use slint::PhysicalSize;
-use slint::{ComponentHandle, Timer, TimerMode};
+use slint::{ComponentHandle, PhysicalSize, Timer, TimerMode};
 use std::error::Error;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
