@@ -78,7 +78,7 @@ fn filetree_entry_name_from_path(path: impl AsRef<Path>) -> String {
 }
 
 /// Creates a globstring from a path to get all items in a directory
-fn glob_string_from_path(path: impl AsRef<Path>) -> Result<String, anyhow::Error> {
+pub fn glob_string_from_path(path: impl AsRef<Path>) -> Result<String, anyhow::Error> {
     let mut pathbuf = path.as_ref().to_path_buf();
 
     if !pathbuf.is_file() && !pathbuf.is_dir() && !pathbuf.exists() {

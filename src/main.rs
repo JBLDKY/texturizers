@@ -5,7 +5,8 @@ use callback::{
     dynamic_image_to_slint_image, go_to_parent, setimg, update_boxed_image, update_file_tree,
 };
 use core::f32;
-use image::{imageops, DynamicImage, GenericImageView, ImageBuffer};
+use files::{glob_string_from_path, list_dir};
+use image::{imageops, DynamicImage, GenericImageView, ImageBuffer, ImageReader};
 use logging::setup_logs;
 use slint::{ComponentHandle, Model, PhysicalSize, Timer, TimerMode, VecModel};
 use std::error::Error;
@@ -33,6 +34,8 @@ struct Config {
     x512: bool,
     w: bool,
     h: bool,
+    nearest: bool,
+    everything_in_dir: bool,
     format: String,
 }
 
@@ -51,16 +54,9 @@ impl Config {
             x512: iiterator[5],
             w: iiterator[6],
             h: iiterator[7],
+            nearest: iiterator[8],
+            everything_in_dir: iiterator[9],
             format: "png".to_string(),
-            // x16: *iterator.nth(0).unwrap_or(&false),
-            // x32: *iterator.nth(1).unwrap_or(&false),
-            // x64: *iterator.nth(2).unwrap_or(&false),
-            // x128: *iterator.nth(3).unwrap_or(&false),
-            // x256: *iterator.nth(4).unwrap_or(&false),
-            // x512: *iterator.nth(5).unwrap_or(&false),
-            // w: *iterator.nth(6).unwrap_or(&false),
-            // h: *iterator.nth(7).unwrap_or(&false),
-            // format: ".png".to_string(),
         }
     }
 
@@ -108,13 +104,6 @@ enum ConfigItem {
 fn main() -> Result<(), Box<dyn Error>> {
     setup_logs();
     let ui = AppWindow::new()?;
-    ui.on_update_file_tree({
-        let ui_handle = ui.as_weak();
-        move || {
-            log::warn!("glob-path");
-            update_file_tree(&ui_handle.unwrap());
-        }
-    });
 
     ui.window()
         .set_size(PhysicalSize::new(DEFAULT_WIDTH_APP, DEFAULT_HEIGHT_APP));
@@ -140,8 +129,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     );
 
     ui.on_export({
+        log::info!("export");
         let ui_handle = ui.as_weak();
         move |nearest, output_dir, name, config| {
+            log::info!("export");
             let ui = ui_handle.unwrap();
             let mut parsed_output_dir = PathBuf::from(output_dir.to_string());
             if !parsed_output_dir.is_dir() {
@@ -175,7 +166,78 @@ fn main() -> Result<(), Box<dyn Error>> {
             let config = Config::from_raw(settings);
 
             let (w, h) = new.dimensions();
-            log::info!("{:#?}", config.x128_enabled());
+
+            log::info!("{:#?}", config);
+
+            if config.everything_in_dir {
+                let files = list_dir(ui.get_path().to_string());
+                log::info!("{:#?}", files);
+
+                for file in files {
+                    let res = ImageReader::open(file);
+                    if let Err(_) = res {
+                        continue;
+                    }
+                    let dec = res.unwrap().decode();
+
+                    if let Err(_) = dec {
+                        continue;
+                    }
+
+                    let dec = dec.unwrap();
+                    if config.w && w > 0 {
+                        for num in config.nums() {
+                            let factor = w as usize / num;
+                            let resized = dec.resize(
+                                num as u32,
+                                h * factor as u32,
+                                imageops::FilterType::Nearest,
+                            );
+                            let suffix = format!(
+                                "{}_w_x{}_w{}_h{}.{}",
+                                name,
+                                num,
+                                resized.width(),
+                                resized.height(),
+                                config.format
+                            );
+
+                            let mut new_name = parsed_output_dir.clone();
+                            new_name.push(suffix);
+
+                            log::debug!("Saving (w): {}", new_name.display());
+                            resized.save(new_name);
+                        }
+                    }
+
+                    log::debug!("config.h: {}, h: {}", config.h, h);
+                    if config.h && h > 0 {
+                        for num in config.nums() {
+                            let factor = h as usize / num;
+                            let resized = dec.resize(
+                                w * factor as u32,
+                                num as u32,
+                                imageops::FilterType::Nearest,
+                            );
+                            let suffix = format!(
+                                "{}_w_x{}_w{}_h{}.{}",
+                                name,
+                                num,
+                                resized.width(),
+                                resized.height(),
+                                config.format
+                            );
+
+                            let mut new_name = parsed_output_dir.clone();
+                            new_name.push(suffix);
+
+                            log::debug!("Saving (h): {}", new_name.display());
+                            resized.save(new_name);
+                        }
+                    }
+                }
+                return;
+            }
 
             if config.w && w > 0 {
                 for num in config.nums() {
@@ -242,6 +304,14 @@ fn main() -> Result<(), Box<dyn Error>> {
             ui_handle
                 .unwrap()
                 .set_original_image(dynamic_image_to_slint_image(new));
+        }
+    });
+
+    ui.on_update_file_tree({
+        let ui_handle = ui.as_weak();
+        move || {
+            log::warn!("glob-path");
+            update_file_tree(&ui_handle.unwrap());
         }
     });
 

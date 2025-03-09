@@ -37,7 +37,9 @@ export component AppWindow inherits Window {
             x256.checked,
             x512.checked,
             w.checked,
-            h.checked
+            h.checked,
+            nearest.checked,
+            everything-in-dir.checked,
         ];
     }
 
@@ -54,9 +56,7 @@ export component AppWindow inherits Window {
     callback export(nearest: bool, output-dir: string, name: string, config: [bool]);
 
     //Image manipulation
-    in-out property <bool> nearest: false;
     in-out property <string> output-dir: root.path;
-    in-out property <bool> everything-in-dir: false;
 
     callback roll-y(y: float);
     callback roll-x(x: float);
@@ -201,18 +201,12 @@ export component AppWindow inherits Window {
                                     height: parent.height;
                                     text: "Nearest";
                                     checked: false;
-                                    toggled() => {
-                                        root.nearest = !root.nearest;
-                                    }
                                 }
 
-                                all-in-dir := CheckBox {
+                                everything-in-dir := CheckBox {
                                     height: parent.height;
                                     text: "Everything in dir";
                                     checked: false;
-                                    toggled() => {
-                                        root.everything-in-dir = !root.everything-in-dir;
-                                    }
                                 }
 
                                 Button {
@@ -220,7 +214,8 @@ export component AppWindow inherits Window {
                                     text: "Export";
 
                                     clicked => {
-                                        export(root.nearest, root.output-dir, root.image-path, root.config());
+                                        debug("Help");
+                                        export(nearest.checked, root.output-dir, root.image-path, root.config());
                                     }
                                 }
                             }
