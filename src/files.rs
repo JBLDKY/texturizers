@@ -55,7 +55,7 @@ fn filetree_entry_name_from_path(path: impl AsRef<Path>) -> String {
         return dir_name_format(path);
     }
 
-    return file_name_format(path);
+    file_name_format(path)
 }
 
 fn filetree_entry_from_path(path: impl AsRef<Path>) -> TodoItem {
