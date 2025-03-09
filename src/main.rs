@@ -4,7 +4,7 @@
 use callback::{
     dynamic_image_to_slint_image, go_to_parent, setimg, update_boxed_image, update_file_tree,
 };
-use image::{imageops, DynamicImage, GenericImage, GenericImageView, ImageBuffer};
+use image::{imageops, DynamicImage, GenericImageView, ImageBuffer};
 use logging::setup_logs;
 use slint::{ComponentHandle, PhysicalSize, Timer, TimerMode};
 use std::error::Error;
@@ -30,7 +30,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let img: Box<DynamicImage> = Box::default();
     let img_ref = Arc::new(Mutex::new(img));
     let img_ref_for_manip = Arc::clone(&img_ref);
-    let img_ref_clone_roll = Arc::clone(&img_ref);
 
     // Trigger the initial reload
     let timer = Timer::default();
@@ -57,38 +56,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             app_window.get_path()
         }
     });
-    // def roll_y(im: PIL.Image, dy: float) -> PIL.Image:
-    //     if 0 > dy > 1:
-    //         raise ValueError(f"Value by which to roll Y is outside of 1 and 0: {dy}")
-    //
-    //     w, h = im.size
-    //
-    //     dy = trunc(h * dy)
-    //     dy %= w
-    //
-    //     upper = im.crop((0, 0, w, dy))
-    //     lower = im.crop((0, dy, w, h))
-    //     im.paste(upper, (0, h - dy, w, h))
-    //     im.paste(lower, (0, 0, w, h - dy))
-    //
-    //     return im
-    //
-    //
-    // def roll_x(im: PIL.Image, dx: float) -> PIL.Image:
-    //     if 0 > dx > 1:
-    //         raise ValueError(f"Value by which to roll X is outside of 1 and 0: {dx}")
-    //
-    //     w, h = im.size
-    //
-    //     dx = trunc(w * dx)
-    //     dx %= w
-    //
-    //     left = im.crop((0, 0, dx, h))
-    //     right = im.crop((dx, 0, w, h))
-    //     im.paste(left, (w - dx, 0, w, h))
-    //     im.paste(right, (0, 0, w - dx, h))
-    //
-    //     return im
 
     ui.on_roll_image({
         let ui_handle = ui.as_weak();
@@ -118,32 +85,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             let travelled_y = (end.y - start.y) % h;
             let pdy = travelled_y as f32 / w as f32;
 
-            new = roll_x(new, pdx);
-            new = roll_y(new, pdy);
+            new = roll_x(&new, pdx);
+            new = roll_y(&new, pdy);
 
             update_boxed_image(&new, &img_ref_for_manip);
             ui.set_original_image(dynamic_image_to_slint_image(new));
-            // log::debug!("Replacing");
-            // imageops::replace(&mut new, &left, dx.into(), dy.into());
-            // imageops::replace(&mut new, &right, dx.into(), dy.into());
-            // imageops::replace(&mut new, &left, end.x.into(), end.y.into());
-            // imageops::flip_horizontal_in_place(&mut new);
-            // log::debug!("done");
-
-            //     left = im.crop((0, 0, dx, h))
-            // let mut dyn_img = inner.lock().unwrap();
-            // let new_img = dyn_img.flipv();
-            // *dyn_img = Box::new(new_img.clone());
-            // drop(dyn_img);
-            //
-            // let unwrapped = new_img.into_rgba8();
-            // let real = {
-            //     slint::Image::from_rgba8(slint::SharedPixelBuffer::clone_from_slice(
-            //         unwrapped.as_raw(),
-            //         unwrapped.width(),
-            //         unwrapped.height(),
-            //     ))
-            // };
         }
     });
 
@@ -177,7 +123,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn roll_x(img: DynamicImage, dx: f32) -> DynamicImage {
+fn roll_x(img: &DynamicImage, dx: f32) -> DynamicImage {
     assert!(
         !!(-1.0..=1.0).contains(&dx),
         "Value by which to roll X is outside of 1 and 0: {dx}"
@@ -189,8 +135,8 @@ fn roll_x(img: DynamicImage, dx: f32) -> DynamicImage {
     let dx_pixels = (w as f32 * dx) as u32;
     let dx_pixels = dx_pixels % w;
 
-    let left = imageops::crop_imm(&img, 0, 0, dx_pixels, h).to_image();
-    let right = imageops::crop_imm(&img, dx_pixels, 0, w - dx_pixels, h).to_image();
+    let left = imageops::crop_imm(img, 0, 0, dx_pixels, h).to_image();
+    let right = imageops::crop_imm(img, dx_pixels, 0, w - dx_pixels, h).to_image();
 
     let mut new_img = ImageBuffer::new(w, h);
 
@@ -204,7 +150,7 @@ fn roll_x(img: DynamicImage, dx: f32) -> DynamicImage {
     DynamicImage::ImageRgba8(new_img)
 }
 
-fn roll_y(img: DynamicImage, dy: f32) -> DynamicImage {
+fn roll_y(img: &DynamicImage, dy: f32) -> DynamicImage {
     assert!(
         (-1.0..=1.0).contains(&dy),
         "Value by which to roll Y is outside of 1 and 0: {dy}"
@@ -216,8 +162,8 @@ fn roll_y(img: DynamicImage, dy: f32) -> DynamicImage {
     let dy_pixels = (h as f32 * dy) as u32;
     let dy_pixels = dy_pixels % h;
 
-    let upper = imageops::crop_imm(&img, 0, 0, w, dy_pixels).to_image();
-    let lower = imageops::crop_imm(&img, 0, dy_pixels, w, h - dy_pixels).to_image();
+    let upper = imageops::crop_imm(img, 0, 0, w, dy_pixels).to_image();
+    let lower = imageops::crop_imm(img, 0, dy_pixels, w, h - dy_pixels).to_image();
 
     let mut new_img = ImageBuffer::new(w, h);
 
